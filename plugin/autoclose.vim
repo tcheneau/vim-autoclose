@@ -81,7 +81,7 @@ fun! <SID>AutoCloseMappingsOn() " {{{2
     "the following simply creates an ambiguous mapping so vim fully
     "processes the escape sequence for terminal keys, see 'ttimeout' for a
     "rough explanation, this just forces it to work
-    if &term[:4] == "xterm" || &term[:5] == 'screen'
+    if &term[:4] == "xterm" || &term[:5] == 'screen' || &term[:3] == 'rxvt'
       inoremap <silent> <C-[>OC <RIGHT>
     endif
     let g:autoclose_on = 1
