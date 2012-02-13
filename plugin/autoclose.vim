@@ -45,12 +45,11 @@
 "             released the first as 1.0, April 3, 2007
 
 " Setup -----------------------------------------------------{{{2
-if exists('g:autoclose_loaded') || &cp
+if &cp
     finish
 endif
 
 
-let g:autoclose_loaded = 1
 let s:autoclose_mapped = 0
 let s:cotstate = &completeopt
 
@@ -58,26 +57,28 @@ let s:cotstate = &completeopt
 "
 nmap <Plug>ToggleAutoCloseMappings :call <SID>ToggleAutoCloseMappings()<CR>
 if (!hasmapto( '<Plug>ToggleAutoCloseMappings', 'n' ))
-    command AutoCloseToggle call <SID>ToggleAutoCloseMappings()
+    command! AutoCloseToggle call <SID>ToggleAutoCloseMappings()
 endif
 fun! <SID>AutoCloseMappingsOn() " {{{2
     inoremap <silent> " <C-R>=<SID>QuoteDelim('"')<CR>
     inoremap <silent> ` <C-R>=<SID>QuoteDelim('`')<CR>
     inoremap <silent> ' <C-R>=match(getline('.')[col('.') - 2],'\w') == 0 && getline('.')[col('.')-1] != "'" ? "'" : <SID>QuoteDelim("'")<CR>
     inoremap <silent> ( (<C-R>=<SID>CloseStackPush(')')<CR>
-    inoremap <silent> ) <C-R>=<SID>CloseStackPop(')')<CR>
+    inoremap <silent> ) <C-R>=<SID>CloseStackPop(')', '(')<CR>
     inoremap <silent> [ [<C-R>=<SID>CloseStackPush(']')<CR>
-    inoremap <silent> ] <C-R>=<SID>CloseStackPop(']')<CR>
+    inoremap <silent> ] <C-R>=<SID>CloseStackPop(']', '[')<CR>
     inoremap <silent> < <<C-R>=<SID>CloseStackPush('>')<CR>
-    inoremap <silent> > <C-R>=<SID>CloseStackPop('>')<CR>
-    "inoremap <silent> { {<C-R>=<SID>CloseStackPush('}')<CR>
-    inoremap <silent> { <C-R>=<SID>OpenSpecial('{','}')<CR>
-    inoremap <silent> } <C-R>=<SID>CloseStackPop('}')<CR>
+    inoremap <silent> > <C-R>=<SID>CloseStackPop('>', '<')<CR>
+    inoremap <silent> { {<C-R>=<SID>CloseStackPush('}')<CR>
+    inoremap <silent> } <C-R>=<SID>CloseStackPop('}', '{')<CR>
     inoremap <silent> <BS> <C-R>=<SID>OpenCloseBackspaceOrDel("BS")<CR>
     inoremap <silent> <C-h> <C-R>=<SID>OpenCloseBackspaceOrDel("BS")<CR>
     inoremap <silent> <Del> <C-R>=<SID>OpenCloseBackspaceOrDel("Del")<CR>
-    inoremap <silent> <Esc> <C-R>=<SID>CloseStackPop('')<CR><Esc>
-    inoremap <silent> <C-[> <C-R>=<SID>CloseStackPop('')<CR><C-[>
+    inoremap <silent> <Esc> <C-R>=<SID>CloseStackPop('', '')<CR><Esc>
+    inoremap <silent> <C-[> <C-R>=<SID>CloseStackPop('', '')<CR><C-[>
+    inoremap <silent> <= <=
+    inoremap <silent> >= >=
+    inoremap <silent> {<CR> {<CR>
     "the following simply creates an ambiguous mapping so vim fully
     "processes the escape sequence for terminal keys, see 'ttimeout' for a
     "rough explanation, this just forces it to work
@@ -105,6 +106,9 @@ fun! <SID>AutoCloseMappingsOff() " {{{2
         iunmap `
         iunmap <
         iunmap >
+        iunmap <=
+        iunmap >=
+        iunmap {<CR>
         let s:autoclose_mapped = 0
         echo "AutoClose Off"
     endif
@@ -149,14 +153,19 @@ function! <SID>CloseStackPush(char) " ---{{{2
     return ''
 endf
 
-function! <SID>JumpOut(char) " ----------{{{2
+function! <SID>JumpOut(char, pair) " ----------{{{2
     let column = col('.') - 1
     let line = getline('.')
     let mcol = match(line[column :], a:char)
-    if a:char != '' &&  mcol >= 0
+    if a:pair == ''
+        let pcol = -1
+    else
+        let pcol = match(line[column :], a:pair)
+    endif
+    if a:char != '' && mcol >= 0 && mcol <= pcol
         "Yeah, this is ugly but vim actually requires each to be special
         "cased to avoid screen flashes/not doing the right thing.
-        echom len(line).' '.(column+mcol)
+        " echom len(line).' '.(column+mcol)
         if line[column] == a:char
             return "\<Right>"
         elseif column+mcol == len(line)-1
@@ -168,27 +177,33 @@ function! <SID>JumpOut(char) " ----------{{{2
         return a:char
     endif
 endf
-function! <SID>CloseStackPop(char) " ---{{{2
+function! <SID>CloseStackPop(char, pair) " ---{{{2
     "echom "pop"
     if(a:char == '')
         silent! pclose
     endif
+    echom len(s:closeStack)
     if len(s:closeStack) == 0
-        return <SID>JumpOut(a:char)
+        return <SID>JumpOut(a:char, a:pair)
     endif
     let column = col('.') - 1
     let line = getline('.')
     let popped = ''
     let lastpop = ''
     "echom join(s:closeStack,'').' || '.lastpop
+    let oldStack = s:closeStack[:]
     while len(s:closeStack) > 0 && ((lastpop == '' && popped == '') || lastpop != a:char)
         let lastpop = remove(s:closeStack,0)
         let popped .= lastpop
         "echom join(s:closeStack,'').' || '.lastpop.' || '.popped
     endwhile
+    if lastpop != a:char
+        let s:closeStack = oldStack
+        return <SID>JumpOut(a:char, a:pair)
+    endif
     "echom ' --> '.popped
     if line[column : column+strlen(popped)-1] != popped
-        return <SID>JumpOut('')
+        return <SID>JumpOut(a:char, a:pair)
     endif
     if column > 0
         call setline('.',line[:column-1].line[(column+strlen(popped)):])
@@ -210,7 +225,7 @@ function! <SID>QuoteDelim(char) " ---{{{2
     return a:char
   elseif line[col - 1] == a:char
     "Escaping out of the string
-    return "\<C-R>=".s:SID()."CloseStackPop(\"\\".a:char."\")\<CR>"
+    return "\<C-R>=".s:SID()."CloseStackPop(\"\\".a:char."\", '')\<CR>"
   else
     "Starting a string
     return a:char."\<C-R>=".s:SID()."CloseStackPush(\"\\".a:char."\")\<CR>"
