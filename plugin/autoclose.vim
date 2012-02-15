@@ -53,6 +53,23 @@ endif
 let s:autoclose_mapped = 0
 let s:cotstate = &completeopt
 
+fun! g:AutoCloseJumpAfterPair()
+    " TODO: move pairs list to variable.
+	let re = "['\"\\])}]"
+	let [lnum, col] = searchpos(re, 'n')
+
+	if getline('.')[col('.') - 1] =~ re
+		let col = col('.')
+	else
+		if lnum != line('.')
+			call feedkeys("\<TAB>", 'n')
+			return
+		endif
+	endif
+
+	call setpos('.', [0, line('.'), col + 1])
+endfun
+
 " (Toggle) Mappings -----------------------------{{{1
 "
 nmap <Plug>ToggleAutoCloseMappings :call <SID>ToggleAutoCloseMappings()<CR>
