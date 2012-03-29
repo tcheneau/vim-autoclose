@@ -55,7 +55,7 @@ let s:cotstate = &completeopt
 
 fun! g:AutoCloseJumpAfterPair()
     " TODO: move pairs list to variable.
-	let re = "['\"\\])}]"
+	let re = "['\"\\])}`]"
 	let [lnum, col] = searchpos(re, 'n')
 
 	if getline('.')[col('.') - 1] =~ re
@@ -84,8 +84,6 @@ fun! <SID>AutoCloseMappingsOn() " {{{2
     inoremap <silent> ) <C-R>=<SID>CloseStackPop(')', '(')<CR>
     inoremap <silent> [ [<C-R>=<SID>CloseStackPush(']')<CR>
     inoremap <silent> ] <C-R>=<SID>CloseStackPop(']', '[')<CR>
-    inoremap <silent> < <<C-R>=<SID>CloseStackPush('>')<CR>
-    inoremap <silent> > <C-R>=<SID>CloseStackPop('>', '<')<CR>
     inoremap <silent> { {<C-R>=<SID>CloseStackPush('}')<CR>
     inoremap <silent> } <C-R>=<SID>CloseStackPop('}', '{')<CR>
     inoremap <silent> <BS> <C-R>=<SID>OpenCloseBackspaceOrDel("BS")<CR>
@@ -93,9 +91,7 @@ fun! <SID>AutoCloseMappingsOn() " {{{2
     inoremap <silent> <Del> <C-R>=<SID>OpenCloseBackspaceOrDel("Del")<CR>
     inoremap <silent> <Esc> <C-R>=<SID>CloseStackPop('', '')<CR><Esc>
     inoremap <silent> <C-[> <C-R>=<SID>CloseStackPop('', '')<CR><C-[>
-    inoremap <silent> <= <=
-    inoremap <silent> >= >=
-    inoremap <silent> {<CR> {<CR>
+    inoremap <silent> {<CR> {<CR>}<C-O>O
     "the following simply creates an ambiguous mapping so vim fully
     "processes the escape sequence for terminal keys, see 'ttimeout' for a
     "rough explanation, this just forces it to work
@@ -110,6 +106,7 @@ fun! <SID>AutoCloseMappingsOff() " {{{2
     if exists("g:autoclose_on") && s:autoclose_mapped
         iunmap "
         iunmap '
+        iunmap `
         iunmap (
         iunmap )
         iunmap [
@@ -121,10 +118,6 @@ fun! <SID>AutoCloseMappingsOff() " {{{2
         iunmap <Del>
         iunmap <Esc>
         iunmap `
-        iunmap <
-        iunmap >
-        iunmap <=
-        iunmap >=
         iunmap {<CR>
         let s:autoclose_mapped = 0
         echo "AutoClose Off"
