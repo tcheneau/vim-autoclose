@@ -77,9 +77,6 @@ if (!hasmapto( '<Plug>ToggleAutoCloseMappings', 'n' ))
     command! AutoCloseToggle call <SID>ToggleAutoCloseMappings()
 endif
 fun! <SID>AutoCloseMappingsOn() " {{{2
-    inoremap <silent> " <C-R>=<SID>QuoteDelim('"')<CR>
-    inoremap <silent> ` <C-R>=<SID>QuoteDelim('`')<CR>
-    inoremap <silent> ' <C-R>=match(getline('.')[col('.') - 2],'\w') == 0 && getline('.')[col('.')-1] != "'" ? "'" : <SID>QuoteDelim("'")<CR>
     inoremap <silent> ( (<C-R>=<SID>CloseStackPush(')')<CR>
     inoremap <silent> ) <C-R>=<SID>CloseStackPop(')', '(')<CR>
     inoremap <silent> [ [<C-R>=<SID>CloseStackPush(']')<CR>
@@ -104,9 +101,6 @@ fun! <SID>AutoCloseMappingsOn() " {{{2
 endf
 fun! <SID>AutoCloseMappingsOff() " {{{2
     if exists("g:autoclose_on") && s:autoclose_mapped
-        iunmap "
-        iunmap '
-        iunmap `
         iunmap (
         iunmap )
         iunmap [
@@ -261,12 +255,9 @@ function! <SID>OpenCloseBackspaceOrDel(map) " ---{{{2
         end
         let curletter = curline[curpos-1]
         let prevletter = curline[curpos-2]
-        if (prevletter == '"' && curletter == '"') ||
-\          (prevletter == "'" && curletter == "'") ||
-\          (prevletter == "(" && curletter == ")") ||
+        if (prevletter == "(" && curletter == ")") ||
 \          (prevletter == "{" && curletter == "}") ||
 \          (prevletter == "[" && curletter == "]") ||
-\          (prevletter == "`" && curletter == "`") ||
 \          (prevletter == "<" && curletter == ">")
             if a:map == 'Del'
                 call insert(s:closeStack, curletter)
